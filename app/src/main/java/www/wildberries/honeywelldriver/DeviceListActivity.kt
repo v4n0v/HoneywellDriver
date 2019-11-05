@@ -58,7 +58,7 @@ class DeviceListActivity : Activity() {
                         intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                     // add the name and the MAC address of the object to the arrayAdapter
                     Log.d(TAG, "ACTION_FOUND ${device.name} + ${device.address}")
-
+                    updateDeviceList()
 //                    mDeviceList.add(device)
 //                    BTArrayAd.add(device.name + "\n" + device.address)
                     //BTArrayAd.notifyDataSetChanged();
@@ -113,9 +113,10 @@ class DeviceListActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.device_list)
         button.setOnClickListener {
-            if (mBtAdapter?.isDiscovering == false)
-                mBtAdapter?.startDiscovery()
-//            updateDeviceList()
+            if (mBtAdapter?.isDiscovering == true)
+                mBtAdapter?.cancelDiscovery()
+
+            mBtAdapter?.startDiscovery()
         }
     }
 
@@ -168,8 +169,8 @@ class DeviceListActivity : Activity() {
         if (pairedDevices.size > 0) {
             lvDevices.visibility = View.VISIBLE
             for (device in pairedDevices) {
-//                if (device.name.contains(FILTER))
-                mPairedDevicesArrayAdapter!!.add(device.name + "\n" + device.address)
+                if (device.name.contains(FILTER))
+                    mPairedDevicesArrayAdapter!!.add(device.name + "\n" + device.address)
             }
 
         } else {

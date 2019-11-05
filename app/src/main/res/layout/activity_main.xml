@@ -10,7 +10,12 @@
         android:id="@+id/tvMessage"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
         android:text="No data"
+        android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/button2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -29,17 +34,35 @@
 
     <Button
         android:id="@+id/btnAimOff"
-        android:layout_width="0dp"
+        android:layout_width="102dp"
         android:layout_height="wrap_content"
-        android:text="AIM OFF"
+        android:text="BEAM OFF"
         app:layout_constraintBottom_toTopOf="@+id/button2"
         app:layout_constraintStart_toEndOf="@+id/btnAimOn" />
 
     <Button
         android:id="@+id/btnAimOn"
-        android:layout_width="wrap_content"
+        android:layout_width="101dp"
         android:layout_height="wrap_content"
-        android:text="AIM ON"
+        android:text="BEAM ON"
         app:layout_constraintBottom_toTopOf="@+id/button2"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/btnBeepOn"
+        android:layout_width="101dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="1dp"
+        android:text="Beep on"
+        app:layout_constraintBottom_toTopOf="@+id/button2"
+        app:layout_constraintEnd_toStartOf="@+id/btnBeepOff"
+        app:layout_constraintStart_toEndOf="@+id/btnAimOff" />
+
+    <Button
+        android:id="@+id/btnBeepOff"
+        android:layout_width="102dp"
+        android:layout_height="wrap_content"
+        android:text="Beep off"
+        app:layout_constraintBottom_toTopOf="@+id/button2"
+        app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

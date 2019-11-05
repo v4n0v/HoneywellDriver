@@ -9,7 +9,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.device_list.*
+import www.wildberries.honeywelldriver.Barcode.Companion.extractBarcode
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -38,20 +38,34 @@ class MainActivity : AppCompatActivity() {
     // String for MAC address
     private var address: String? = null
 
+    private fun isConnected() =
+        mConnectedThread?.isInterrupted != true && btSocket?.isConnected == true
+
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         btnAimOn.setOnClickListener {
-            if (mConnectedThread?.isInterrupted != true && btSocket?.isConnected == true){
-                mConnectedThread?.write(scannerMessage(AIM_ON))
-            }
+            if (isConnected())
+                mConnectedThread?.sendCommands(ScannerCommand.LIGHT_ON, ScannerCommand.AIM_ON)
+
         }
 
-        btnAimOn.setOnClickListener {
-            if (mConnectedThread?.isInterrupted != true && btSocket?.isConnected == true){
-                mConnectedThread?.write(scannerMessage(AIM_OFF))
-            }
+        btnBeepOn.setOnClickListener {
+            if (isConnected())
+                mConnectedThread?.sendCommand(ScannerCommand.BEEP_ON)
+
+        }
+
+        btnBeepOff.setOnClickListener {
+            if (isConnected())
+                mConnectedThread?.sendCommand(ScannerCommand.BEEP_OFF)
+
+        }
+
+        btnAimOff.setOnClickListener {
+            if (isConnected())
+                mConnectedThread?.sendCommands(ScannerCommand.LIGHT_OFF, ScannerCommand.AIM_OFF)
         }
 
         bluetoothIn = object : Handler() {
@@ -63,14 +77,12 @@ class MainActivity : AppCompatActivity() {
                     recDataString.append(readMessage)
                     recDataString.append("\n")
                     tvMessage.text = recDataString.toString()
-
                 }
             }
         }
 
         btAdapter = BluetoothAdapter.getDefaultAdapter()       // get Bluetooth adapter
         checkBTState()
-
     }
 
 
@@ -89,6 +101,8 @@ class MainActivity : AppCompatActivity() {
 
         } catch (e: Exception) {
             Toast.makeText(baseContext, "Socket creation failed", Toast.LENGTH_LONG).show()
+            val i = Intent(this, DeviceListActivity::class.java)
+            startActivity(i)
         }
     }
 
@@ -147,22 +161,15 @@ class MainActivity : AppCompatActivity() {
             while (!isInterrupted || btSocket?.isConnected == true) {
                 try {
                     bytes = mmInStream!!.read(buffer)            //read bytes from input buffer
-                    val readMessage = String(buffer, 0, bytes).also { it.trim() }
+                    val readMessage = String(buffer, 0, bytes)//.also { it.trim() }
                     if (readMessage.isNotEmpty()) {
                         Log.d(TAG, "incoming data: $readMessage")
-                        bluetoothIn?.let { handler ->
-                            //                            handler.obtainMessage()?.let { msg ->
-//                                val bundle = Bundle()
-//                                bundle.putString(MSG_KEY, readMessage)
-//                                msg.data = bundle
-//                                handler.sendMessage(msg)
-//                                Log.d(TAG, "message sent: $readMessage")
-//todo нахуй
-                            handler.obtainMessage(handlerState, bytes, -1, readMessage)
-                                .sendToTarget()
+                        extractBarcode(readMessage)?.let { barcode ->
+                            bluetoothIn?.let { handler ->
+                                handler.obtainMessage(handlerState, bytes, -1, barcode.toString())
+                                    .sendToTarget()
+                            }
                         }
-
-
                     }
                 } catch (e: IOException) {
                     Log.e(TAG, "read message error", e)
@@ -171,11 +178,29 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        fun write(input: String) {
+        fun configureScanner(){
+            sendCommand(ScannerCommand.BEEP_ON)
+            sendCommand(ScannerCommand.AIM_ON)
+            sendCommand(ScannerCommand.QR_ON)
+            sendCommand(ScannerCommand.LIGHT_ON)
+        }
+
+        fun sendCommands(vararg commands: ScannerCommand) {
+            commands.forEach { sendCommand(it) }
+        }
+
+        fun sendCommand(command: ScannerCommand) {
+            write("\u0016M\r${command.value}.")
+        }
+
+        private fun write(input: String) {
             val msgBuffer = input.toByteArray()           //converts entered String into bytes
             try {
                 mmOutStream!!.write(msgBuffer)                //write bytes over BT connection via outstream
-            } catch (e: IOException) {
+                mmOutStream.flush()
+                Log.d(TAG, "write $input complete")
+            } catch (e: Exception) {
+                Log.e(TAG, "write data ", e)
                 //if you cannot write, close the application
                 Toast.makeText(baseContext, "Connection Failure", Toast.LENGTH_LONG).show()
                 finish()
@@ -183,4 +208,6 @@ class MainActivity : AppCompatActivity() {
 
         }
     }
+
+
 }
