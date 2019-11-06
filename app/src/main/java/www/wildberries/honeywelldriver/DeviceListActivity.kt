@@ -17,6 +17,11 @@ import android.os.Parcelable
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import androidx.annotation.ColorInt
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
+import com.google.zxing.WriterException
 
 
 abstract class OnTextClickListener : OnItemClickListener {
@@ -31,6 +36,11 @@ class DeviceListActivity : Activity() {
         private const val TAG = "DeviceListActivityTAG"
         const val EXTRA_DEVICE_ADDRESS = "device_address"
         private const val FILTER = "_8680i_"
+
+        private const val BARCODE_WIDTH = 1024
+        private const val BARCODE_HEIGHT = 50
+        private const val WHITE = -0x1
+        private const val BLACK = -0x1000000
     }
 
     private var mBtAdapter: BluetoothAdapter? = null
@@ -42,48 +52,30 @@ class DeviceListActivity : Activity() {
             val action = intent.action
 
             when (action) {
-
+                BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED -> {
+                    Log.d(TAG, "ACTION_CONNECTION_STATE_CHANGED")
+                }
                 BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
                     progressBar.visibility = View.VISIBLE
                     Log.d(TAG, "ACTION_DISCOVERY_STARTED")
                     header.text = "Поиск устройств"
                 }
 
-                // When discovery finds a device
                 BluetoothDevice.ACTION_FOUND -> {
                     Log.d(TAG, "ACTION_FOUND")
-
-                    // Get the BluetoothDevice object from the Intent
                     val device =
                         intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    // add the name and the MAC address of the object to the arrayAdapter
                     Log.d(TAG, "ACTION_FOUND ${device.name} + ${device.address}")
                     updateDeviceList()
-//                    mDeviceList.add(device)
-//                    BTArrayAd.add(device.name + "\n" + device.address)
-                    //BTArrayAd.notifyDataSetChanged();
-
                 }
 
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
                     Log.d(TAG, "ACTION_DISCOVERY_FINISHED")
                     progressBar.visibility = View.GONE
                     header.text = ""
-//                    mProgressDlg.dismiss()
-//                    Log.d(LOG_TAG, "Поиск закончен")
-//                    // discovery has finished, give a call to fetchUuidsWithSdp on first device in list.
-//                    if (!mDeviceList.isEmpty()) {
-//                        val device = mDeviceList.remove(0)
-//                        val result = device.fetchUuidsWithSdp()
-//                    }
                 }
-
                 BluetoothDevice.ACTION_UUID -> {
                     Log.d(TAG, "ACTION_UUID UUID")
-
-                    // This is when we can be assured that fetchUuidsWithSdp has completed.
-                    // So get the uuids and call fetchUuidsWithSdp on another device in list
-
                     val deviceExtra =
                         intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                     val uuidExtra = intent.getParcelableArrayExtra(BluetoothDevice.EXTRA_UUID)
@@ -112,6 +104,9 @@ class DeviceListActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.device_list)
+        val macAddress = "34145F9FA2EA"
+        val bcImg = generateBarcode(macAddress)
+        imageView.setImageBitmap(bcImg)
         button.setOnClickListener {
             if (mBtAdapter?.isDiscovering == true)
                 mBtAdapter?.cancelDiscovery()
@@ -149,7 +144,7 @@ class DeviceListActivity : Activity() {
         lvDevices.adapter = mPairedDevicesArrayAdapter
         lvDevices.onItemClickListener = object : OnTextClickListener() {
             override fun onClick(pos: Int, text: String) {
-                header.text = "Connecting..."
+                header.text = "Соединение..."
                 val address = text.substring(text.length - 17)
 
                 val i = Intent(this@DeviceListActivity, MainActivity::class.java)
@@ -168,14 +163,14 @@ class DeviceListActivity : Activity() {
         mPairedDevicesArrayAdapter!!.clear()
         if (pairedDevices.size > 0) {
             lvDevices.visibility = View.VISIBLE
-            for (device in pairedDevices) {
+            for (device in pairedDevices)
                 if (device.name.contains(FILTER))
                     mPairedDevicesArrayAdapter!!.add(device.name + "\n" + device.address)
-            }
-
-        } else {
-            mPairedDevicesArrayAdapter!!.add("No devices")
         }
+
+        if (mPairedDevicesArrayAdapter!!.isEmpty)
+            mPairedDevicesArrayAdapter!!.add("Нет устройств")
+
         mPairedDevicesArrayAdapter?.notifyDataSetChanged()
     }
 
@@ -192,6 +187,39 @@ class DeviceListActivity : Activity() {
                 startActivityForResult(enableBtIntent, 1)
             }
         }
+    }
+
+
+    private fun generateBarcode(data: String): Bitmap {
+        return makeBarcodeImage(
+            "[Fnc3]LnkB$data",
+            BarcodeFormat.CODE_128,
+            BARCODE_WIDTH,
+            BARCODE_HEIGHT,
+            BLACK,
+            WHITE
+        )
+    }
+
+    @Throws(WriterException::class)
+    private fun makeBarcodeImage(
+        contents: String,
+        format: BarcodeFormat,
+        width: Int,
+        height: Int, @ColorInt onColor: Int, @ColorInt offColor: Int
+    ): Bitmap {
+        val result = MultiFormatWriter().encode(contents, format, width, height)
+        val pixels = IntArray(width * height)
+
+        for (y in 0 until height) {
+            val offset = y * width
+            for (x in 0 until width)
+                pixels[offset + x] = if (result.get(x, y)) onColor else offColor
+        }
+
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+        return bitmap
     }
 
 

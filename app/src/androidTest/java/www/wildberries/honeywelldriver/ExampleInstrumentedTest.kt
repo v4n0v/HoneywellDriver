@@ -25,18 +25,6 @@ class ExampleInstrumentedTest {
         assertEquals("www.wildberries.honeywelldriver", appContext.packageName)
     }
 
-
-    @Test
-    fun base64Text() {
-        val command = "BATBEP0"
-        var b64 = Base64.encodeToString(scannerMessage(command).toByteArray(), Base64.NO_WRAP)
-        assertEquals(b64, "Fk0NQkFUQkVQMC4=")
-
-        b64 = Base64.encodeToString(scannerMessage("SCNAIM3").toByteArray(), Base64.NO_WRAP)
-        assertEquals(b64, "Fk0NU0NOQUlNMy4=")
-    }
-
-
     @Test
     fun barcodeExtraction() {
         //CODE128
